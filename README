@@ -1,0 +1,74 @@
+BEARD
+-----
+
+Beard is a mustache inspired template solution for Erlang. It was a created
+due to mustache.erl being too slow for the authors needs.
+
+Beard takes two files, a logic file and a template file, and turns them into
+an Erlang module with a render/1 function.
+
+Beard is suitable if you have complex templates with lots of data. We have
+converted some heavy yaws pages to beard templates with no noticable
+performance impact at all.
+
+For smaller templates, the more feature rich, but also slower, mustache.erl
+might be a better choice.
+
+SYNTAX
+-------
+There are two constructs in beard, the {{call}} construct and the
+{{#subcontext}} {{/endofsubcontext}} construct.
+
+{{name}} will be replaced by whatever LogicModule:name(Context) returns.
+Note that beard does not automatically escape output, nor convert it to
+strings.
+
+{{#persons}} will call LogicModule:subcontext(persons) and returns a list
+if subcontexts. The subtemplate will be rendered with each subcontext in the
+list.
+
+EXAMPLE
+-------
+The following example illustrates how beard is used (with a logic file
+example, and a template file example.txt):
+
+example:
+    -module(example).
+    -export([render/1]).
+
+    count(Persons) ->
+        integer_to_list(length(Persons)).
+
+    persons(Persons) ->
+        Persons.
+
+    name({Name, _Age}) ->
+        Name.
+
+    age({_Name, Age}) ->
+        integer_to_list(Age).
+        
+
+example.txt:
+  Hi!
+  I have {{count}} friends.
+  {{#persons}}
+    {{name}} is {{age}} years old.
+  {{/persons}}
+
+And here is how you compile and render the template with beard:
+$ erl
+$> beard:compile("example.txt", "example", "ebin").
+$> Persons = [{"Anne", 10}, {"Joe", 8}].
+$> Output = beard:render(Persons). % Persons is the context.
+$> file:write_file("example.output", Output).
+$> q().
+$ cat example.output
+  Hi!
+  I have 2 friends
+
+    Anne is 10 years old.
+
+    Joe is 8 years old.
+
+Note that all whitespace and linebreaks from the template are preserved.
